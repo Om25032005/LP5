@@ -1,0 +1,140 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import warnings
+warnings.filterwarnings('ignore')
+
+# ── Load Boston Dataset ──────────────────────────────────────────────────────
+# Boston was removed from sklearn 1.2+, load from CMU directly
+data_url = "http://lib.stat.cmu.edu/datasets/boston"
+raw_df = pd.read_csv(data_url, sep=r"\s+", skiprows=22, header=None)
+data = np.hstack([raw_df.values[::2, :], raw_df.values[1::2, :2]])
+target = raw_df.values[1::2, 2]
+
+columns = ['CRIM','ZN','INDUS','CHAS','NOX','RM','AGE','DIS','RAD','TAX','PTRATIO','B','LSTAT']
+df = pd.DataFrame(data, columns=columns)
+df['MEDV'] = target
+
+# ── 1. Shape ─────────────────────────────────────────────────────────────────
+print("=" * 50)
+print("1. SHAPE")
+print("=" * 50)
+print(df.shape)
+
+# ── 2. Info ──────────────────────────────────────────────────────────────────
+print("\n" + "=" * 50)
+print("2. INFO")
+print("=" * 50)
+df.info()
+
+# ── 3. Null Values ───────────────────────────────────────────────────────────
+print("\n" + "=" * 50)
+print("3. NULL VALUES")
+print("=" * 50)
+print(df.isnull().sum())
+
+# ── 4. Describe ──────────────────────────────────────────────────────────────
+print("\n" + "=" * 50)
+print("4. DESCRIBE")
+print("=" * 50)
+print(df.describe())
+
+
+# ── 8. Scatter Plots (3) ──────────────────────────────────────────────────────
+fig, axes = plt.subplots(1, 3, figsize=(16, 5))
+
+# RM vs MEDV
+axes[0].scatter(df['RM'], df['MEDV'], alpha=0.5, color='steelblue')
+axes[0].set_title('RM vs MEDV')
+axes[0].set_xlabel('Average Rooms per Dwelling (RM)')
+axes[0].set_ylabel('MEDV ($1000s)')
+
+# LSTAT vs MEDV
+axes[1].scatter(df['LSTAT'], df['MEDV'], alpha=0.5, color='coral')
+axes[1].set_title('LSTAT vs MEDV')
+axes[1].set_xlabel('% Lower Status Population (LSTAT)')
+axes[1].set_ylabel('MEDV ($1000s)')
+
+# CRIM vs MEDV
+axes[2].scatter(df['CRIM'], df['MEDV'], alpha=0.5, color='green')
+axes[2].set_title('CRIM vs MEDV')
+axes[2].set_xlabel('Per Capita Crime Rate (CRIM)')
+axes[2].set_ylabel('MEDV ($1000s)')
+
+plt.suptitle('Scatter Plots: Features vs House Price', fontsize=14)
+plt.tight_layout()
+plt.show()
+
+# ── 9. Deep Neural Network for Regression ────────────────────────────────────
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import mean_squared_error, r2_score
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers
+
+X = df.drop('MEDV', axis=1).values
+y = df['MEDV'].values
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test  = scaler.transform(X_test)
+
+model = keras.Sequential([
+    layers.Dense(128, activation='relu', input_shape=(X_train.shape[1],)),
+    layers.Dense(64,  activation='relu'),
+    layers.Dense(32,  activation='relu'),
+    layers.Dense(1)   # Linear output for regression
+])
+
+model.compile(optimizer='adam', loss='mse', metrics=['mae'])
+model.summary()
+
+history = model.fit(X_train, y_train,
+                    epochs=100,
+                    batch_size=32,
+                    validation_split=0.1,
+                    verbose=1)
+
+# ── 10. Training Curves ───────────────────────────────────────────────────────
+plt.figure(figsize=(12, 4))
+
+plt.subplot(1, 2, 1)
+plt.plot(history.history['loss'], label='Train Loss')
+plt.plot(history.history['val_loss'], label='Val Loss')
+plt.title('Loss (MSE)')
+plt.xlabel('Epoch')
+plt.legend()
+
+plt.subplot(1, 2, 2)
+plt.plot(history.history['mae'], label='Train MAE')
+plt.plot(history.history['val_mae'], label='Val MAE')
+plt.title('Mean Absolute Error')
+plt.xlabel('Epoch')
+plt.legend()
+
+plt.tight_layout()
+plt.show()
+
+# ── 11. Evaluation ────────────────────────────────────────────────────────────
+y_pred = model.predict(X_test).flatten()
+
+mse = mean_squared_error(y_test, y_pred)
+r2  = r2_score(y_test, y_pred)
+
+print(f"\nTest MSE  : {mse:.4f}")
+print(f"Test RMSE : {np.sqrt(mse):.4f}")
+print(f"Test R²   : {r2:.4f}")
+
+# ── 12. Actual vs Predicted ───────────────────────────────────────────────────
+plt.figure(figsize=(7, 5))
+plt.scatter(y_test, y_pred, alpha=0.6, color='steelblue')
+plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--', lw=2)
+plt.title('Actual vs Predicted House Prices')
+plt.xlabel('Actual MEDV')
+plt.ylabel('Predicted MEDV')
+plt.tight_layout()
+plt.show()
