@@ -3,9 +3,10 @@
 
 using namespace std;
 
+// Merge Function
 void merge(int arr[], int low, int mid, int high)
 {
-    int temp[100];
+    int temp[1000];
 
     int i = low;
     int j = mid + 1;
@@ -39,7 +40,22 @@ void merge(int arr[], int low, int mid, int high)
     }
 }
 
-void mergeSort(int arr[], int low, int high)
+// Sequential Merge Sort
+void SequentialMergeSort(int arr[], int low, int high)
+{
+    if(low < high)
+    {
+        int mid = (low + high) / 2;
+
+        SequentialMergeSort(arr, low, mid);
+        SequentialMergeSort(arr, mid + 1, high);
+
+        merge(arr, low, mid, high);
+    }
+}
+
+// Parallel Merge Sort
+void ParallelMergeSort(int arr[], int low, int high)
 {
     if(low < high)
     {
@@ -49,12 +65,12 @@ void mergeSort(int arr[], int low, int high)
         {
             #pragma omp section
             {
-                mergeSort(arr, low, mid);
+                ParallelMergeSort(arr, low, mid);
             }
 
             #pragma omp section
             {
-                mergeSort(arr, mid + 1, high);
+                ParallelMergeSort(arr, mid + 1, high);
             }
         }
 
@@ -71,35 +87,57 @@ int main()
     cout << "Enter number of elements: ";
     cin >> n;
 
-    int arr[n];
+    int arr1[n], arr2[n];
 
     cout << "Enter elements:\n";
 
     for(int i = 0; i < n; i++)
     {
-        cin >> arr[i];
+        cin >> arr1[i];
+        arr2[i] = arr1[i];
     }
 
-    double start = omp_get_wtime();
+    // Sequential Merge Sort
+    double start1 = omp_get_wtime();
 
-    mergeSort(arr, 0, n - 1);
+    SequentialMergeSort(arr1, 0, n - 1);
 
-    double end = omp_get_wtime();
+    double end1 = omp_get_wtime();
 
-    cout << "\nSorted Array:\n";
+    cout << "\nSequential Sorted Array:\n";
 
     for(int i = 0; i < n; i++)
     {
-        cout << arr[i] << " ";
+        cout << arr1[i] << " ";
     }
 
-    cout << "\nExecution Time: "
-         << end - start << " seconds\n";
+    cout << "\nSequential Time: "
+         << end1 - start1 << " seconds\n";
+
+    // Parallel Merge Sort
+    double start2 = omp_get_wtime();
+
+    ParallelMergeSort(arr2, 0, n - 1);
+
+    double end2 = omp_get_wtime();
+
+    cout << "\nParallel Sorted Array:\n";
+
+    for(int i = 0; i < n; i++)
+    {
+        cout << arr2[i] << " ";
+    }
+
+    cout << "\nParallel Time: "
+         << end2 - start2 << " seconds\n";
 
     return 0;
 }
 
+/*
+Compile:
+g++ -fopenmp MERGE.cpp -o merge
 
-
-// g++ -fopenmp MERGE.cpp -o merge
-// .\merge.exe
+Run:
+./merge
+*/
