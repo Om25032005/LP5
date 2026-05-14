@@ -1,0 +1,257 @@
+dataset : https://www.kaggle.com/datasets/vbookshelf/rice-leaf-diseases
+
+code :
+
+# =========================================================
+# RICE LEAF DISEASE DETECTION USING CNN
+# Works for BOTH Google Colab and Jupyter Notebook
+# =========================================================
+
+# =========================================================
+# STEP 1 — MOUNT GOOGLE DRIVE (COLAB ONLY)
+# =========================================================
+
+# Uncomment these 2 lines ONLY if using Google Colab
+
+# from google.colab import drive
+# drive.mount('/content/drive')
+
+
+# =========================================================
+# STEP 2 — IMPORT LIBRARIES
+# =========================================================
+
+import tensorflow as tf
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras import layers, models
+import matplotlib.pyplot as plt
+import numpy as np
+from tensorflow.keras.preprocessing import image
+
+
+# =========================================================
+# STEP 3 — DATASET PATH
+# =========================================================
+
+# ---------------- GOOGLE COLAB PATH ----------------
+# Uncomment if using Google Colab
+
+# dataset_path = "/content/drive/MyDrive/rice_leaf_diseases"
+
+
+# ---------------- JUPYTER NOTEBOOK PATH ----------------
+# Uncomment if using Jupyter Notebook
+
+dataset_path = r"C:\Users\YourName\Desktop\rice_leaf_diseases"
+
+
+# =========================================================
+# STEP 4 — IMAGE PREPROCESSING
+# =========================================================
+
+img_size = (224, 224)
+batch_size = 16
+
+datagen = ImageDataGenerator(
+    rescale=1./255,
+    validation_split=0.2,
+    rotation_range=20,
+    zoom_range=0.2,
+    horizontal_flip=True
+)
+
+train_data = datagen.flow_from_directory(
+    dataset_path,
+    target_size=img_size,
+    batch_size=batch_size,
+    class_mode='categorical',
+    subset='training'
+)
+
+val_data = datagen.flow_from_directory(
+    dataset_path,
+    target_size=img_size,
+    batch_size=batch_size,
+    class_mode='categorical',
+    subset='validation'
+)
+
+
+# =========================================================
+# STEP 5 — BUILD CNN MODEL
+# =========================================================
+
+model = models.Sequential()
+
+# First Convolution Layer
+model.add(layers.Conv2D(
+    32,
+    (3,3),
+    activation='relu',
+    input_shape=(224,224,3)
+))
+
+model.add(layers.MaxPooling2D((2,2)))
+
+# Second Convolution Layer
+model.add(layers.Conv2D(
+    64,
+    (3,3),
+    activation='relu'
+))
+
+model.add(layers.MaxPooling2D((2,2)))
+
+# Third Convolution Layer
+model.add(layers.Conv2D(
+    128,
+    (3,3),
+    activation='relu'
+))
+
+model.add(layers.MaxPooling2D((2,2)))
+
+# Flatten Layer
+model.add(layers.Flatten())
+
+# Dense Layer
+model.add(layers.Dense(
+    128,
+    activation='relu'
+))
+
+# Dropout Layer
+model.add(layers.Dropout(0.5))
+
+# Output Layer (3 classes)
+model.add(layers.Dense(
+    3,
+    activation='softmax'
+))
+
+
+# =========================================================
+# STEP 6 — COMPILE MODEL
+# =========================================================
+
+model.compile(
+    optimizer='adam',
+    loss='categorical_crossentropy',
+    metrics=['accuracy']
+)
+
+
+# =========================================================
+# STEP 7 — MODEL SUMMARY
+# =========================================================
+
+model.summary()
+
+
+# =========================================================
+# STEP 8 — TRAIN MODEL
+# =========================================================
+
+history = model.fit(
+    train_data,
+    validation_data=val_data,
+    epochs=15
+)
+
+
+# =========================================================
+# STEP 9 — EVALUATE MODEL
+# =========================================================
+
+loss, accuracy = model.evaluate(val_data)
+
+print("\nValidation Accuracy:", accuracy)
+
+
+# =========================================================
+# STEP 10 — PLOT ACCURACY GRAPH
+# =========================================================
+
+plt.figure(figsize=(8,5))
+
+plt.plot(history.history['accuracy'])
+plt.plot(history.history['val_accuracy'])
+
+plt.title('Model Accuracy')
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy')
+
+plt.legend(['Train', 'Validation'])
+
+plt.show()
+
+
+# =========================================================
+# STEP 11 — SAVE MODEL
+# =========================================================
+
+# -------- GOOGLE COLAB SAVE PATH --------
+# Uncomment for Colab
+
+# model.save("/content/drive/MyDrive/rice_disease_model.h5")
+
+
+# -------- JUPYTER NOTEBOOK SAVE PATH --------
+# Uncomment for Jupyter Notebook
+
+model.save("rice_disease_model.h5")
+
+print("\nModel Saved Successfully!")
+
+
+# =========================================================
+# STEP 12 — PREDICT SINGLE IMAGE
+# =========================================================
+
+# Give test image path here
+
+test_image_path = r"C:\Users\YourName\Desktop\test.jpg"
+
+# Example for Colab:
+# test_image_path = "/content/test.jpg"
+
+img = image.load_img(
+    test_image_path,
+    target_size=(224,224)
+)
+
+img_array = image.img_to_array(img)
+
+img_array = np.expand_dims(img_array, axis=0)
+
+img_array = img_array / 255.0
+
+prediction = model.predict(img_array)
+
+class_names = list(train_data.class_indices.keys())
+
+predicted_class = class_names[np.argmax(prediction)]
+
+print("\nPredicted Disease:", predicted_class)
+
+
+# =========================================================
+# DATASET FOLDER STRUCTURE
+# =========================================================
+
+"""
+rice_leaf_diseases/
+│
+├── Bacterial leaf blight/
+├── Brown spot/
+└── Leaf smut/
+"""
+
+# =========================================================
+# INSTALLATION COMMANDS (IF NEEDED)
+# =========================================================
+
+"""
+pip install tensorflow
+pip install matplotlib
+"""
