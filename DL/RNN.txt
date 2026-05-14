@@ -1,0 +1,311 @@
+# =========================================================
+# GOOGLE STOCK PRICE PREDICTION USING RNN (LSTM)
+# Works in BOTH Jupyter Notebook and Google Colab
+# =========================================================
+
+# =========================================================
+# STEP 1 — IMPORT LIBRARIES
+# =========================================================
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+from sklearn.preprocessing import MinMaxScaler
+
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, LSTM, Dropout
+
+
+# =========================================================
+# STEP 2 — LOAD DATASET
+# =========================================================
+
+# Download dataset:
+# https://www.kaggle.com/datasets/borismarjanovic/price-volume-data-for-all-us-stocks-etfs
+
+# Example CSV:
+# Google_Stock_Price_Train.csv
+
+dataset = pd.read_csv("Google_Stock_Price_Train.csv")
+
+print(dataset.head())
+
+
+# =========================================================
+# STEP 3 — USE OPEN STOCK PRICE COLUMN
+# =========================================================
+
+training_set = dataset.iloc[:, 1:2].values
+
+print(training_set.shape)
+
+
+# =========================================================
+# STEP 4 — FEATURE SCALING
+# =========================================================
+
+scaler = MinMaxScaler(feature_range=(0,1))
+
+training_set_scaled = scaler.fit_transform(training_set)
+
+
+# =========================================================
+# STEP 5 — CREATE DATA FOR RNN
+# =========================================================
+
+X_train = []
+y_train = []
+
+# Using previous 60 days to predict next day
+
+for i in range(60, len(training_set_scaled)):
+
+    X_train.append(training_set_scaled[i-60:i, 0])
+
+    y_train.append(training_set_scaled[i, 0])
+
+X_train = np.array(X_train)
+y_train = np.array(y_train)
+
+
+# =========================================================
+# STEP 6 — RESHAPE DATA FOR RNN
+# =========================================================
+
+# Required shape:
+# (samples, timesteps, features)
+
+X_train = np.reshape(
+    X_train,
+    (X_train.shape[0], X_train.shape[1], 1)
+)
+
+print(X_train.shape)
+
+
+# =========================================================
+# STEP 7 — BUILD RNN MODEL (LSTM)
+# =========================================================
+
+model = Sequential()
+
+
+# -------- FIRST LSTM LAYER --------
+
+model.add(LSTM(
+    units=50,
+    return_sequences=True,
+    input_shape=(X_train.shape[1], 1)
+))
+
+model.add(Dropout(0.2))
+
+
+# -------- SECOND LSTM LAYER --------
+
+model.add(LSTM(
+    units=50,
+    return_sequences=True
+))
+
+model.add(Dropout(0.2))
+
+
+# -------- THIRD LSTM LAYER --------
+
+model.add(LSTM(
+    units=50,
+    return_sequences=True
+))
+
+model.add(Dropout(0.2))
+
+
+# -------- FOURTH LSTM LAYER --------
+
+model.add(LSTM(
+    units=50
+))
+
+model.add(Dropout(0.2))
+
+
+# -------- OUTPUT LAYER --------
+
+model.add(Dense(units=1))
+
+
+# =========================================================
+# STEP 8 — COMPILE MODEL
+# =========================================================
+
+model.compile(
+    optimizer='adam',
+    loss='mean_squared_error'
+)
+
+
+# =========================================================
+# STEP 9 — MODEL SUMMARY
+# =========================================================
+
+model.summary()
+
+
+# =========================================================
+# STEP 10 — TRAIN MODEL
+# =========================================================
+
+history = model.fit(
+    X_train,
+    y_train,
+    epochs=20,
+    batch_size=32
+)
+
+
+# =========================================================
+# STEP 11 — SAVE MODEL
+# =========================================================
+
+model.save("google_stock_rnn_model.h5")
+
+print("\nModel Saved Successfully!")
+
+
+# =========================================================
+# STEP 12 — LOAD TEST DATA
+# =========================================================
+
+test_dataset = pd.read_csv("Google_Stock_Price_Test.csv")
+
+real_stock_price = test_dataset.iloc[:, 1:2].values
+
+
+# =========================================================
+# STEP 13 — PREPARE TEST INPUT
+# =========================================================
+
+dataset_total = pd.concat(
+    (dataset['Open'], test_dataset['Open']),
+    axis=0
+)
+
+inputs = dataset_total[
+    len(dataset_total) - len(test_dataset) - 60:
+].values
+
+inputs = inputs.reshape(-1,1)
+
+inputs = scaler.transform(inputs)
+
+
+# =========================================================
+# STEP 14 — CREATE TEST DATA
+# =========================================================
+
+X_test = []
+
+for i in range(60, 80):
+
+    X_test.append(inputs[i-60:i, 0])
+
+X_test = np.array(X_test)
+
+X_test = np.reshape(
+    X_test,
+    (X_test.shape[0], X_test.shape[1], 1)
+)
+
+
+# =========================================================
+# STEP 15 — PREDICT STOCK PRICES
+# =========================================================
+
+predicted_stock_price = model.predict(X_test)
+
+predicted_stock_price = scaler.inverse_transform(
+    predicted_stock_price
+)
+
+
+# =========================================================
+# STEP 16 — VISUALIZE RESULTS
+# =========================================================
+
+plt.figure(figsize=(10,5))
+
+plt.plot(
+    real_stock_price,
+    color='red',
+    label='Real Google Stock Price'
+)
+
+plt.plot(
+    predicted_stock_price,
+    color='blue',
+    label='Predicted Google Stock Price'
+)
+
+plt.title('Google Stock Price Prediction')
+
+plt.xlabel('Time')
+
+plt.ylabel('Google Stock Price')
+
+plt.legend()
+
+plt.show()
+
+
+# =========================================================
+# STEP 17 — LOSS GRAPH
+# =========================================================
+
+plt.figure(figsize=(8,5))
+
+plt.plot(history.history['loss'])
+
+plt.title('Training Loss')
+
+plt.xlabel('Epoch')
+
+plt.ylabel('Loss')
+
+plt.show()
+
+
+# =========================================================
+# INSTALLATION COMMANDS (IF NEEDED)
+# =========================================================
+
+"""
+pip install tensorflow
+pip install pandas
+pip install matplotlib
+pip install scikit-learn
+"""
+
+# =========================================================
+# DATASET FILES NEEDED
+# =========================================================
+
+"""
+1. Google_Stock_Price_Train.csv
+2. Google_Stock_Price_Test.csv
+"""
+
+# =========================================================
+# MODEL TYPE USED
+# =========================================================
+
+"""
+RNN Type Used:
+LSTM (Long Short-Term Memory)
+
+Why LSTM?
+- Better for time series prediction
+- Remembers previous patterns
+- Handles sequential data effectively
+"""

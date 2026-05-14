@@ -1,0 +1,54 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.metrics import classification_report
+from tensorflow import keras
+from tensorflow.keras import layers
+from tensorflow.keras.datasets import imdb
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+import warnings
+warnings.filterwarnings('ignore')
+
+# ── Load Dataset ──────────────────────────────────────────────────────────────
+VOCAB_SIZE = 10000
+MAX_LEN    = 200
+
+(X_train, y_train), (X_test, y_test) = imdb.load_data(num_words=VOCAB_SIZE)
+print(f"Train: {X_train.shape}, Test: {X_test.shape}")
+print(f"Sample label: {y_train[0]} (1=positive, 0=negative)")
+
+X_train = pad_sequences(X_train, maxlen=MAX_LEN)
+X_test  = pad_sequences(X_test,  maxlen=MAX_LEN)
+
+# ── Bar Chart ─────────────────────────────────────────────────────────────────
+plt.figure(figsize=(6, 4))
+import pandas as pd
+pd.Series(y_train).value_counts().plot(kind='bar', color=['coral','steelblue'], edgecolor='black')
+plt.title('Sentiment Class Distribution (Train)')
+plt.xticks([0, 1], ['Negative', 'Positive'], rotation=0)
+plt.ylabel('Count')
+plt.tight_layout()
+plt.show()
+
+# ── Model ─────────────────────────────────────────────────────────────────────
+model = keras.Sequential([
+    layers.Embedding(VOCAB_SIZE, 64, input_length=MAX_LEN),
+    layers.GlobalAveragePooling1D(),
+    layers.Dense(64, activation='relu'),
+    layers.Dense(32, activation='relu'),
+    layers.Dense(1,  activation='sigmoid')   # Binary output
+])
+model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+model.summary()
+history = model.fit(X_train, y_train, epochs=10, batch_size=64, validation_split=0.1, verbose=1)
+
+# ── Evaluation ────────────────────────────────────────────────────────────────
+y_pred = (model.predict(X_test) > 0.5).astype(int).flatten()
+loss, acc = model.evaluate(X_test, y_test, verbose=0)
+print(f"\nTest Accuracy: {acc:.4f}")
+print(classification_report(y_test, y_pred, target_names=['Negative','Positive']))
+
+# ── Training Curves ───────────────────────────────────────────────────────────
+fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+axes[0].plot(history.history['loss'], label='Train'); axes[0].plot(history.history['val_loss'], label='Val'); axes[0].set_title('Loss'); axes[0].legend()
+axes[1].plot(history.history['accuracy'], label='Train'); axes[1].plot(history.history['val_accuracy'], label='Val'); axes[1].set_title('Accuracy'); axes[1].legend()
+plt.tight_layout(); plt.show()

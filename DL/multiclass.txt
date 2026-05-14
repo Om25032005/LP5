@@ -1,0 +1,63 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.metrics import classification_report, confusion_matrix
+from tensorflow import keras
+from tensorflow.keras import layers
+import warnings
+warnings.filterwarnings('ignore')
+
+# ── Load Dataset ──────────────────────────────────────────────────────────────
+url = "https://archive.ics.uci.edu/ml/machine-learning-databases/letter-recognition/letter-recognition.data"
+df = pd.read_csv(url, header=None)
+df.columns = ['letter','x-box','y-box','width','high','onpix','x-bar','y-bar',
+               'x2bar','y2bar','xybar','x2ybr','xy2br','x-ege','xegvy','y-ege','yegvx']
+
+print(df.shape)
+df.info()
+print(df.isnull().sum())
+print(df.describe())
+
+# ── Bar Chart ─────────────────────────────────────────────────────────────────
+plt.figure(figsize=(12, 4))
+df['letter'].value_counts().sort_index().plot(kind='bar', color='steelblue', edgecolor='black')
+plt.title('Letter Class Distribution')
+plt.xlabel('Letter')
+plt.ylabel('Count')
+plt.tight_layout()
+plt.show()
+
+# ── Preprocessing ─────────────────────────────────────────────────────────────
+le = LabelEncoder()
+y = le.fit_transform(df['letter'])
+X = df.drop('letter', axis=1).values
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test  = scaler.transform(X_test)
+
+# ── Model ─────────────────────────────────────────────────────────────────────
+model = keras.Sequential([
+    layers.Dense(256, activation='relu', input_shape=(16,)),
+    layers.Dense(128, activation='relu'),
+    layers.Dense(64,  activation='relu'),
+    layers.Dense(26,  activation='softmax')   # 26 classes A-Z
+])
+model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+model.summary()
+history = model.fit(X_train, y_train, epochs=50, batch_size=32, validation_split=0.1, verbose=1)
+
+# ── Evaluation ────────────────────────────────────────────────────────────────
+y_pred = np.argmax(model.predict(X_test), axis=1)
+loss, acc = model.evaluate(X_test, y_test, verbose=0)
+print(f"\nTest Accuracy: {acc:.4f}")
+print(classification_report(y_test, y_pred, target_names=le.classes_))
+
+# ── Training Curves ───────────────────────────────────────────────────────────
+fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+axes[0].plot(history.history['loss'], label='Train'); axes[0].plot(history.history['val_loss'], label='Val'); axes[0].set_title('Loss'); axes[0].legend()
+axes[1].plot(history.history['accuracy'], label='Train'); axes[1].plot(history.history['val_accuracy'], label='Val'); axes[1].set_title('Accuracy'); axes[1].legend()
+plt.tight_layout(); plt.show()

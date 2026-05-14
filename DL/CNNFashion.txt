@@ -1,0 +1,208 @@
+# dataset : not sure which one to use
+
+# code :
+# =========================================================
+# FASHION MNIST CLOTHING CLASSIFICATION USING CNN
+# Works in BOTH Jupyter Notebook and Google Colab
+# =========================================================
+
+# =========================================================
+# STEP 1 — IMPORT LIBRARIES
+# =========================================================
+
+import tensorflow as tf
+from tensorflow.keras import layers, models
+from tensorflow.keras.datasets import fashion_mnist
+import matplotlib.pyplot as plt
+import numpy as np
+
+
+# =========================================================
+# STEP 2 — LOAD FASHION MNIST DATASET
+# =========================================================
+
+(x_train, y_train), (x_test, y_test) = fashion_mnist.load_data()
+
+
+# =========================================================
+# STEP 3 — CLASS LABELS
+# =========================================================
+
+class_names = [
+    'T-shirt/top',
+    'Trouser',
+    'Pullover',
+    'Dress',
+    'Coat',
+    'Sandal',
+    'Shirt',
+    'Sneaker',
+    'Bag',
+    'Ankle boot'
+]
+
+
+# =========================================================
+# STEP 4 — PREPROCESS DATA
+# =========================================================
+
+# Normalize pixel values
+x_train = x_train / 255.0
+x_test = x_test / 255.0
+
+# Reshape for CNN
+x_train = x_train.reshape(-1, 28, 28, 1)
+x_test = x_test.reshape(-1, 28, 28, 1)
+
+
+# =========================================================
+# STEP 5 — DISPLAY SAMPLE IMAGES
+# =========================================================
+
+plt.figure(figsize=(10,10))
+
+for i in range(9):
+    plt.subplot(3,3,i+1)
+    plt.imshow(x_train[i].reshape(28,28), cmap='gray')
+    plt.title(class_names[y_train[i]])
+    plt.axis('off')
+
+plt.show()
+
+
+# =========================================================
+# STEP 6 — BUILD CNN MODEL
+# =========================================================
+
+model = models.Sequential()
+
+# First Convolution Layer
+model.add(layers.Conv2D(
+    32,
+    (3,3),
+    activation='relu',
+    input_shape=(28,28,1)
+))
+
+model.add(layers.MaxPooling2D((2,2)))
+
+# Second Convolution Layer
+model.add(layers.Conv2D(
+    64,
+    (3,3),
+    activation='relu'
+))
+
+model.add(layers.MaxPooling2D((2,2)))
+
+# Flatten Layer
+model.add(layers.Flatten())
+
+# Dense Layer
+model.add(layers.Dense(
+    128,
+    activation='relu'
+))
+
+# Dropout Layer
+model.add(layers.Dropout(0.5))
+
+# Output Layer (10 classes)
+model.add(layers.Dense(
+    10,
+    activation='softmax'
+))
+
+
+# =========================================================
+# STEP 7 — COMPILE MODEL
+# =========================================================
+
+model.compile(
+    optimizer='adam',
+    loss='sparse_categorical_crossentropy',
+    metrics=['accuracy']
+)
+
+
+# =========================================================
+# STEP 8 — MODEL SUMMARY
+# =========================================================
+
+model.summary()
+
+
+# =========================================================
+# STEP 9 — TRAIN MODEL
+# =========================================================
+
+history = model.fit(
+    x_train,
+    y_train,
+    epochs=10,
+    validation_data=(x_test, y_test)
+)
+
+
+# =========================================================
+# STEP 10 — EVALUATE MODEL
+# =========================================================
+
+loss, accuracy = model.evaluate(x_test, y_test)
+
+print("\nTest Accuracy:", accuracy)
+
+
+# =========================================================
+# STEP 11 — PLOT ACCURACY GRAPH
+# =========================================================
+
+plt.figure(figsize=(8,5))
+
+plt.plot(history.history['accuracy'])
+plt.plot(history.history['val_accuracy'])
+
+plt.title('Model Accuracy')
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy')
+
+plt.legend(['Train', 'Validation'])
+
+plt.show()
+
+
+# =========================================================
+# STEP 12 — SAVE MODEL
+# =========================================================
+
+model.save("fashion_mnist_cnn_model.h5")
+
+print("\nModel Saved Successfully!")
+
+
+# =========================================================
+# STEP 13 — PREDICT SINGLE IMAGE
+# =========================================================
+
+prediction = model.predict(x_test)
+
+predicted_label = np.argmax(prediction[0])
+
+print("\nPredicted Class:", class_names[predicted_label])
+print("Actual Class:", class_names[y_test[0]])
+
+
+# =========================================================
+# STEP 14 — DISPLAY PREDICTED IMAGE
+# =========================================================
+
+plt.imshow(x_test[0].reshape(28,28), cmap='gray')
+
+plt.title(
+    f"Predicted: {class_names[predicted_label]}\n"
+    f"Actual: {class_names[y_test[0]]}"
+)
+
+plt.axis('off')
+
+plt.show()
