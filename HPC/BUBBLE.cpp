@@ -10,18 +10,18 @@ void swapNumbers(int &a, int &b)
     b = temp;
 }
 
-void bubbleSort(int arr[], int n)
+void BubbleSort(int arr[], int n)
 {
     double start = omp_get_wtime();
 
-    for(int i = 0; i < n; i++)
+    for(int i = 0; i < n - 1; i++)
     {
         #pragma omp parallel for
-        for(int j = i + 1; j < n; j++)
+        for(int j = 0; j < n - i - 1; j++)
         {
-            if(arr[j] < arr[i])
+            if(arr[j] > arr[j + 1])
             {
-                swapNumbers(arr[j], arr[i]);
+                swapNumbers(arr[j], arr[j + 1]);
             }
         }
     }
@@ -50,7 +50,7 @@ int main()
         cin >> arr[i];
     }
 
-    bubbleSort(arr, n);
+    BubbleSort(arr, n);
 
     cout << "\nSorted Array:\n";
 
@@ -61,6 +61,5 @@ int main()
 
     return 0;
 }
-
-// g++ -fopenmp BUBBLE.cpp -o bubbleSort
+// g++ -fopenmp BUBBLE.cpp -o bubble
 // .\bubble.exe
